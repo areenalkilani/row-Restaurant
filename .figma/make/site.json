@@ -1,0 +1,10 @@
+{
+  "description": "Showcase ROW Restaurant's menu with a premium, elegant website featuring high-quality food images, easy navigation, and responsive design for an exceptional dining experience.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
