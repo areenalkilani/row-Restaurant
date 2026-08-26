@@ -256,7 +256,8 @@ function Header() {
 // ─── Hero ─────────────────────────────────────────────────────────────────────
 
 function Hero() {
-  const { banner } = useApp();
+  const { banner, storeSettings } = useApp();
+  const brandLogo = storeSettings.logoUrl || logoUrl;
 
   const scrollToMenu = () => {
     const el = document.getElementById("menu-section");
@@ -310,7 +311,7 @@ function Hero() {
             animationDelay: "0.1s",
           }}
         >
-          <img src={logoUrl} alt="ROW Restaurant" className="w-full h-full object-cover" style={{ objectPosition: "center" }} />
+          <img src={brandLogo} alt="ROW Restaurant" className="w-full h-full object-cover" style={{ objectPosition: "center" }} />
         </div>
 
         {/* Badge */}
@@ -680,15 +681,18 @@ function ContactSection() {
 // ─── Footer ───────────────────────────────────────────────────────────────────
 
 function Footer() {
+  const { storeSettings } = useApp();
+  const brandLogo = storeSettings.logoUrl || logoUrl;
+
   return (
     <footer className="py-8 px-4 text-center" style={{ borderTop: "1px solid rgba(255,255,255,0.04)", background: "#0A0A0A" }}>
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-full overflow-hidden" style={{ border: "1px solid rgba(245,197,24,0.3)" }}>
-              <img src={logoUrl} alt="ROW" className="w-full h-full object-contain bg-black p-0.5" />
+              <img src={brandLogo} alt="ROW" className="w-full h-full object-contain bg-black p-0.5" />
             </div>
-            <span className="font-display text-sm font-semibold text-white">ROW Restaurant</span>
+            <span className="font-display text-sm font-semibold text-white">{storeSettings.storeName || "ROW Restaurant"}</span>
           </div>
           <p className="text-xs" style={{ color: "#444" }}>
             شارع حيفا، حيفا

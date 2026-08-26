@@ -345,7 +345,7 @@ export const initialBanner = {
   imageUrl: `https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1920&h=1080&fit=crop&auto=format&q=80`,
   videoUrl: "",
   headline: "مرحباً بكم في ROW",
-  subtext: "مطعم ROW يقدم أجود أنواع المأكولات والمشروبات في أجواء أنيقة ومريحة مع خدمة مميزة وتجربة طعام لا تُنسى.",
+  subtext: "تجربة طعام استثنائية في قلب حيفا — نكهات أصيلة وأجواء لا تُنسى",
 };
 
 export const initialContact = {
