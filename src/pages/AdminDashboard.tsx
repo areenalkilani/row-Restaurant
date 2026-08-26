@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useApp } from "../context/AppContext";
 import { Category, Product } from "../data/menuData";
 import logoUrl from "../imports/logo_row.jpeg";
@@ -54,8 +54,8 @@ function Overview() {
 
   const stats = [
     { label: "إجمالي المبيعات", value: formatMoney(totalSales), icon: "💰", color: "#F5C518" },
-    { label: "إجمالي الطلبات", value: orders.length, icon: "🧾", color: "#60a5fa" },
-    { label: "إجمالي العملاء", value: customers.length, icon: "👥", color: "#22c55e" },
+    ...(orders.length > 0 ? [{ label: "إجمالي الطلبات", value: orders.length, icon: "🧾", color: "#60a5fa" }] : []),
+    ...(customers.length > 0 ? [{ label: "إجمالي العملاء", value: customers.length, icon: "👥", color: "#22c55e" }] : []),
     { label: "إجمالي المنتجات", value: totalProducts, icon: "🍽️", color: "#F5C518" },
     { label: "منتجات مرئية", value: visibleProducts, icon: "✅", color: "#22c55e" },
     { label: "الأقسام", value: totalCategories, icon: "📂", color: "#a78bfa" },
@@ -742,7 +742,7 @@ function StoreSettingsManager() {
   );
 }
 
-const NAV_ITEMS: { id: AdminSection; label: string; icon: string }[] = [
+const ALL_NAV_ITEMS: { id: AdminSection; label: string; icon: string }[] = [
   { id: "overview", label: "نظرة عامة", icon: "📊" },
   { id: "categories", label: "الأقسام", icon: "📂" },
   { id: "products", label: "المنتجات", icon: "🍽️" },
@@ -754,8 +754,20 @@ const NAV_ITEMS: { id: AdminSection; label: string; icon: string }[] = [
 ];
 
 export default function AdminDashboard() {
-  const { logout, setCurrentPage, adminSection, setAdminSection } = useApp();
+  const { logout, setCurrentPage, adminSection, setAdminSection, orders, customers } = useApp();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const NAV_ITEMS = ALL_NAV_ITEMS.filter((item) => {
+    if (item.id === "orders") return orders.length > 0;
+    if (item.id === "customers") return customers.length > 0;
+    return true;
+  });
+
+  useEffect(() => {
+    if ((adminSection === "orders" || adminSection === "customers") && (orders.length === 0 || customers.length === 0)) {
+      setAdminSection("overview");
+    }
+  }, [adminSection, orders.length, customers.length, setAdminSection]);
 
   const renderSection = () => {
     switch (adminSection) {
