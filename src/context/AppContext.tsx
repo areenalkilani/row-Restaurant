@@ -68,7 +68,7 @@ export interface Customer {
 }
 
 export const initialStoreSettings: StoreSettings = {
-  storeName: "ROW Restaurant & Cafe",
+  storeName: "ROW Restaurant",
   logoUrl: "",
   phone: "",
   whatsapp: "",

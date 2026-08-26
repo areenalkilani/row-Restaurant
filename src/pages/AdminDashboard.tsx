@@ -687,6 +687,14 @@ function StoreSettingsManager() {
   const { storeSettings, updateStoreSettings } = useApp();
   const [local, setLocal] = useState(storeSettings);
   const [saved, setSaved] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleLogoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const dataUrl = await toBase64(file);
+    setLocal((prev) => ({ ...prev, logoUrl: dataUrl }));
+  };
 
   const handleSave = () => {
     updateStoreSettings(local);
@@ -706,9 +714,27 @@ function StoreSettingsManager() {
           <label className="block text-sm mb-2" style={{ color: "#ccc" }}>اسم المتجر</label>
           <input className="form-input" value={local.storeName} onChange={(e) => setLocal((prev) => ({ ...prev, storeName: e.target.value }))} />
         </div>
+
         <div>
-          <label className="block text-sm mb-2" style={{ color: "#ccc" }}>رابط الشعار</label>
-          <input className="form-input" value={local.logoUrl} onChange={(e) => setLocal((prev) => ({ ...prev, logoUrl: e.target.value }))} placeholder="https://..." dir="ltr" />
+          <label className="block text-sm mb-2" style={{ color: "#ccc" }}>الشعار</label>
+          <div className="space-y-3">
+            {local.logoUrl && (
+              <div className="w-24 h-24 rounded-xl overflow-hidden border" style={{ borderColor: "rgba(245,197,24,0.3)", background: "#000" }}>
+                <img src={local.logoUrl} alt="Logo preview" className="w-full h-full object-cover" style={{ opacity: 1, visibility: "visible", display: "block" }} />
+              </div>
+            )}
+            <div className="flex gap-3 items-center flex-wrap">
+              <button type="button" onClick={() => fileRef.current?.click()} className="btn-gold px-4 py-2 rounded-lg text-sm">رفع صورة الشعار</button>
+              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleLogoFile} />
+              <input
+                className="form-input flex-1 min-w-[220px]"
+                value={local.logoUrl}
+                onChange={(e) => setLocal((prev) => ({ ...prev, logoUrl: e.target.value }))}
+                placeholder="https://... أو رابط الصورة"
+                dir="ltr"
+              />
+            </div>
+          </div>
         </div>
         <div>
           <label className="block text-sm mb-2" style={{ color: "#ccc" }}>الهاتف</label>
@@ -754,8 +780,9 @@ const ALL_NAV_ITEMS: { id: AdminSection; label: string; icon: string }[] = [
 ];
 
 export default function AdminDashboard() {
-  const { logout, setCurrentPage, adminSection, setAdminSection, orders, customers } = useApp();
+  const { logout, setCurrentPage, adminSection, setAdminSection, orders, customers, storeSettings } = useApp();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const brandLogo = storeSettings.logoUrl || logoUrl;
 
   const NAV_ITEMS = ALL_NAV_ITEMS.filter((item) => {
     if (item.id === "orders") return orders.length > 0;
@@ -791,7 +818,7 @@ export default function AdminDashboard() {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
           </button>
           <div className="w-8 h-8 rounded-full overflow-hidden" style={{ border: "1px solid rgba(245,197,24,0.3)", background: "#000000" }}>
-            <img src={logoUrl} alt="ROW" className="w-full h-full object-cover" style={{ opacity: 1, visibility: "visible", display: "block", objectPosition: "center" }} />
+            <img src={brandLogo} alt="ROW" className="w-full h-full object-cover" style={{ opacity: 1, visibility: "visible", display: "block", objectPosition: "center" }} />
           </div>
           <span className="font-display font-bold text-white text-sm">لوحة تحكم ROW</span>
         </div>

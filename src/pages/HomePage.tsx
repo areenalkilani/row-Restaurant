@@ -66,9 +66,10 @@ function ChevronDown() {
 // ─── Header ───────────────────────────────────────────────────────────────────
 
 function Header() {
-  const { isLoggedIn, isAdmin, logout, setCurrentPage } = useApp();
+  const { isLoggedIn, isAdmin, logout, setCurrentPage, storeSettings } = useApp();
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const brandLogo = storeSettings.logoUrl || logoUrl;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -107,7 +108,7 @@ function Header() {
                 background: "#000000",
               }}
             >
-              <img src={logoUrl} alt="ROW" className="w-full h-full object-cover" style={{ objectPosition: "center" }} />
+              <img src={brandLogo} alt="ROW" className="w-full h-full object-cover" style={{ objectPosition: "center" }} />
             </div>
             <div className="hidden sm:block">
               <div className="font-display font-bold text-white text-lg leading-none">ROW</div>
@@ -687,7 +688,7 @@ function Footer() {
             <div className="w-7 h-7 rounded-full overflow-hidden" style={{ border: "1px solid rgba(245,197,24,0.3)" }}>
               <img src={logoUrl} alt="ROW" className="w-full h-full object-contain bg-black p-0.5" />
             </div>
-            <span className="font-display text-sm font-semibold text-white">ROW Restaurant & Cafe</span>
+            <span className="font-display text-sm font-semibold text-white">ROW Restaurant</span>
           </div>
           <p className="text-xs" style={{ color: "#444" }}>
             شارع حيفا، حيفا

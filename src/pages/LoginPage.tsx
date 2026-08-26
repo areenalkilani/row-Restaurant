@@ -3,9 +3,10 @@ import { useApp } from "../context/AppContext";
 import logoUrl from "../imports/logo_row.jpeg";
 
 export default function LoginPage() {
-  const { login, setCurrentPage } = useApp();
+  const { login, setCurrentPage, storeSettings } = useApp();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const brandLogo = storeSettings.logoUrl || logoUrl;
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
@@ -60,7 +61,7 @@ export default function LoginPage() {
               }}
             >
               <img
-                src={logoUrl}
+                src={brandLogo}
                 alt="ROW Restaurant"
                 className="w-full h-full object-cover"
                 style={{ objectPosition: "center" }}
@@ -68,7 +69,7 @@ export default function LoginPage() {
             </div>
             <h1 className="font-display text-2xl font-bold text-white">تسجيل الدخول</h1>
             <p className="text-sm mt-1" style={{ color: "#888" }}>
-              ROW Restaurant & Cafe
+              ROW Restaurant
             </p>
           </div>
 
