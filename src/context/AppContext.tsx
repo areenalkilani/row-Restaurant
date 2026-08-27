@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
 import {
   Category,
   Product,
@@ -149,12 +149,23 @@ const LS = {
   },
 };
 
+type PersistedState = {
+  categories: Category[];
+  products: Product[];
+  banner: BannerConfig;
+  contact: ContactInfo;
+  storeSettings: StoreSettings;
+  customers: Customer[];
+  orders: Order[];
+};
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(() => LS.get("row_logged_in", false));
   const [isAdmin, setIsAdmin] = useState(() => LS.get("row_is_admin", false));
   const [userEmail, setUserEmail] = useState(() => LS.get("row_user_email", ""));
   const [currentPage, setCurrentPage] = useState<Page>("home");
   const [adminSection, setAdminSection] = useState<AdminSection>("overview");
+  const databaseReady = useRef(false);
 
   const [categories, setCategories] = useState<Category[]>(() => {
     const savedCategories = LS.get("row_categories", initialCategories);
@@ -195,13 +206,45 @@ export function AppProvider({ children }: { children: ReactNode }) {
     LS.get("row_orders", initialOrders)
   );
 
-  useEffect(() => { LS.set("row_categories", categories); }, [categories]);
-  useEffect(() => { LS.set("row_products", products); }, [products]);
-  useEffect(() => { LS.set("row_banner", banner); }, [banner]);
-  useEffect(() => { LS.set("row_contact", contact); }, [contact]);
-  useEffect(() => { LS.set("row_store_settings", storeSettings); }, [storeSettings]);
-  useEffect(() => { LS.set("row_customers", customers); }, [customers]);
-  useEffect(() => { LS.set("row_orders", orders); }, [orders]);
+  useEffect(() => {
+    let active = true;
+    fetch("/api/state")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((saved: PersistedState | null) => {
+        if (!active) return;
+        if (saved) {
+          setCategories(saved.categories || initialCategories);
+          setProducts(saved.products || initialProducts);
+          setBanner(saved.banner || initialBanner);
+          setContact(saved.contact || initialContact);
+          setStoreSettings(saved.storeSettings || initialStoreSettings);
+          setCustomers(saved.customers || initialCustomers);
+          setOrders(saved.orders || initialOrders);
+        } else {
+          const initialState: PersistedState = { categories, products, banner, contact, storeSettings, customers, orders };
+          fetch("/api/state", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(initialState),
+          }).catch(() => undefined);
+        }
+        databaseReady.current = true;
+      })
+      .catch(() => {
+        databaseReady.current = true;
+      });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!databaseReady.current) return;
+    const state: PersistedState = { categories, products, banner, contact, storeSettings, customers, orders };
+    fetch("/api/state", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(state),
+    }).catch(() => undefined);
+  }, [categories, products, banner, contact, storeSettings, customers, orders]);
 
   const login = (email: string, password: string): boolean => {
     if (email === ADMIN_EMAIL && password === ADMIN_PASS) {
