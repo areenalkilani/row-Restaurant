@@ -161,6 +161,7 @@ function CategoriesManager() {
   const [visible, setVisible] = useState(true);
   const [preview, setPreview] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLDivElement>(null);
 
   const reset = () => {
     setName("");
@@ -186,6 +187,7 @@ function CategoriesManager() {
     setPreview(cat.image);
     setVisible(cat.visible);
     setShowForm(true);
+    setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 0);
   };
 
   const handleSave = () => {
@@ -211,7 +213,7 @@ function CategoriesManager() {
       </div>
 
       {showForm && (
-        <div className="mb-8 p-6 rounded-xl animate-scaleIn" style={{ background: "#1C1C1C", border: "1px solid rgba(245,197,24,0.2)" }} dir="rtl">
+        <div ref={formRef} className="mb-8 p-6 rounded-xl animate-scaleIn" style={{ background: "#1C1C1C", border: "1px solid rgba(245,197,24,0.2)" }} dir="rtl">
           <h3 className="font-semibold text-white mb-5">{editId ? "تعديل القسم" : "إضافة قسم جديد"}</h3>
           <div className="space-y-4">
             <div>
@@ -287,6 +289,7 @@ function ProductsManager() {
   const [preview, setPreview] = useState("");
   const [visible, setVisible] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLDivElement>(null);
 
   const reset = () => {
     setName("");
@@ -318,6 +321,7 @@ function ProductsManager() {
     setPreview(prod.image);
     setVisible(prod.visible);
     setShowForm(true);
+    setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 0);
   };
 
   const handleSave = () => {
@@ -345,7 +349,7 @@ function ProductsManager() {
       </div>
 
       {showForm && (
-        <div className="mb-8 p-6 rounded-xl animate-scaleIn" style={{ background: "#1C1C1C", border: "1px solid rgba(245,197,24,0.2)" }} dir="rtl">
+        <div ref={formRef} className="mb-8 p-6 rounded-xl animate-scaleIn" style={{ background: "#1C1C1C", border: "1px solid rgba(245,197,24,0.2)" }} dir="rtl">
           <h3 className="font-semibold text-white mb-5">{editId ? "تعديل المنتج" : "إضافة منتج جديد"}</h3>
           <div className="grid md:grid-cols-2 gap-4">
             <div>
