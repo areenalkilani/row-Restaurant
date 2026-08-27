@@ -849,7 +849,7 @@ export default function AdminDashboard() {
           <span className="font-display font-bold text-white text-sm">لوحة تحكم {storeSettings.storeName || "ROW Restaurant"}</span>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={() => setCurrentPage("home")} className="text-xs px-3 py-1.5 rounded-lg transition-all hidden sm:block" style={{ background: "rgba(255,255,255,0.06)", color: "#ccc", border: "1px solid rgba(255,255,255,0.1)" }}>← الموقع</button>
+          <button aria-label="العودة إلى الموقع" title="العودة إلى الموقع" onClick={() => setCurrentPage("home")} className="text-xs px-3 py-1.5 rounded-lg transition-all" style={{ background: "rgba(255,255,255,0.06)", color: "#ccc", border: "1px solid rgba(255,255,255,0.1)" }}>← الموقع</button>
           <button onClick={logout} className="text-xs px-3 py-1.5 rounded-lg transition-all" style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)" }}>خروج</button>
         </div>
       </header>

@@ -156,15 +156,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [currentPage, setCurrentPage] = useState<Page>("home");
   const [adminSection, setAdminSection] = useState<AdminSection>("overview");
 
-  const [categories, setCategories] = useState<Category[]>(() =>
-    LS.get("row_categories", initialCategories)
-  );
-  const [products, setProducts] = useState<Product[]>(() =>
-    LS.get("row_products", initialProducts)
-  );
+  const [categories, setCategories] = useState<Category[]>(() => {
+    const savedCategories = LS.get("row_categories", initialCategories);
+    return savedCategories.map((category) => {
+      const seedCategory = initialCategories.find((seed) => seed.id === category.id);
+      const isMenuPageImage = ["min1.jpeg", "min2.jpeg", "min3.jpeg", "min4.jpeg", "min5.jpeg"].some((fileName) => category.image.includes(fileName));
+      return isMenuPageImage && seedCategory ? { ...category, image: seedCategory.image } : category;
+    });
+  });
+  const [products, setProducts] = useState<Product[]>(() => {
+    const savedProducts = LS.get("row_products", initialProducts);
+    return savedProducts.map((product) => {
+      const seedProduct = initialProducts.find((seed) => seed.id === product.id);
+      const isMenuPageImage = ["min1.jpeg", "min2.jpeg", "min3.jpeg", "min4.jpeg", "min5.jpeg"].some((fileName) => product.image.includes(fileName));
+      return isMenuPageImage && seedProduct ? { ...product, image: seedProduct.image } : product;
+    });
+  });
   const [banner, setBanner] = useState<BannerConfig>(() => {
     const savedBanner = LS.get("row_banner", initialBanner);
-    if (savedBanner.subtext === "تجربة طعام استثنائية في جنين — نكهات أصيلة وأجواء لا تُنسى") {
+    if (
+      savedBanner.subtext === "تجربة طعام استثنائية في جنين — نكهات أصيلة وأجواء لا تُنسى" ||
+      savedBanner.subtext === "تجربة طعام استثنائية من قلب جنين — من أفضل ما في شارع حيفا"
+    ) {
       return { ...savedBanner, subtext: initialBanner.subtext };
     }
     return savedBanner;

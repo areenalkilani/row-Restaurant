@@ -1,9 +1,3 @@
-import min1 from "../imports/min1.jpeg";
-import min2 from "../imports/min2.jpeg";
-import min3 from "../imports/min3.jpeg";
-import min4 from "../imports/min4.jpeg";
-import min5 from "../imports/min5.jpeg";
-
 export interface Category {
   id: string;
   name: string;
@@ -22,12 +16,8 @@ export interface Product {
   visible: boolean;
 }
 
-const localImages = [min1, min2, min3, min4, min5];
-
-const u = (id: string, w = 400, h = 300) => {
-  const index = Math.abs(id.split("").reduce((sum, ch) => sum + ch.charCodeAt(0), 0)) % localImages.length;
-  return localImages[index];
-};
+const u = (id: string, w = 400, h = 300) =>
+  `https://images.unsplash.com/photo-${id}?w=${w}&h=${h}&fit=crop&auto=format&q=80`;
 
 // Category cover images
 const IMGS = {
@@ -345,7 +335,7 @@ export const initialBanner = {
   imageUrl: `https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1920&h=1080&fit=crop&auto=format&q=80`,
   videoUrl: "",
   headline: "مرحباً بكم في ROW",
-  subtext: "تجربة طعام استثنائية من قلب جنين — من أفضل ما في شارع حيفا",
+  subtext: "تجربة طعام استثنائية من قلب حيفا — نكهات أصيلة وأجواء لا تُنسى",
 };
 
 export const initialContact = {
