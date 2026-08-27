@@ -308,7 +308,7 @@ function Hero() {
       />
 
       {/* Content */}
-      <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
+      <div className="relative z-10 text-center px-4 max-w-4xl mx-auto" style={{ textAlign: "center" }}>
         {/* Logo emblem */}
         <div
           className="w-24 h-24 md:w-32 md:h-32 rounded-full mx-auto mb-8 overflow-hidden animate-fadeInUp"
@@ -341,7 +341,7 @@ function Hero() {
         {/* Headline */}
         <h1
           className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-4 animate-fadeInUp"
-          style={{ animationDelay: "0.3s", textShadow: "0 4px 30px rgba(0,0,0,0.8)", lineHeight: 1.15 }}
+          style={{ animationDelay: "0.3s", textShadow: "0 4px 30px rgba(0,0,0,0.8)", lineHeight: 1.15, textAlign: "center" }}
           dir="rtl"
         >
           {banner.headline}

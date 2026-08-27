@@ -185,6 +185,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   });
   const [banner, setBanner] = useState<BannerConfig>(() => {
     const savedBanner = LS.get("row_banner", initialBanner);
+    if (savedBanner.headline === "مرحباً بكم في ROW") {
+      return { ...savedBanner, headline: initialBanner.headline };
+    }
     if (
       savedBanner.subtext === "تجربة طعام استثنائية في جنين — نكهات أصيلة وأجواء لا تُنسى" ||
       savedBanner.subtext === "تجربة طعام استثنائية من قلب جنين — من أفضل ما في شارع حيفا"
@@ -213,9 +216,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .then((saved: PersistedState | null) => {
         if (!active) return;
         if (saved) {
+          const remoteBanner = saved.banner || initialBanner;
           setCategories(saved.categories || initialCategories);
           setProducts(saved.products || initialProducts);
-          setBanner(saved.banner || initialBanner);
+          setBanner(remoteBanner.headline === "مرحباً بكم في ROW" ? { ...remoteBanner, headline: initialBanner.headline } : remoteBanner);
           setContact(saved.contact || initialContact);
           setStoreSettings(saved.storeSettings || initialStoreSettings);
           setCustomers(saved.customers || initialCustomers);
