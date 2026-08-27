@@ -68,7 +68,7 @@ export interface Customer {
 }
 
 export const initialStoreSettings: StoreSettings = {
-  storeName: "ROW Restaurant & Cafe",
+  storeName: "ROW Restaurant",
   logoUrl: "",
   phone: "",
   whatsapp: "",
@@ -162,9 +162,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [products, setProducts] = useState<Product[]>(() =>
     LS.get("row_products", initialProducts)
   );
-  const [banner, setBanner] = useState<BannerConfig>(() =>
-    LS.get("row_banner", initialBanner)
-  );
+  const [banner, setBanner] = useState<BannerConfig>(() => {
+    const savedBanner = LS.get("row_banner", initialBanner);
+    if (savedBanner.subtext === "تجربة طعام استثنائية في جنين — نكهات أصيلة وأجواء لا تُنسى") {
+      return { ...savedBanner, subtext: initialBanner.subtext };
+    }
+    return savedBanner;
+  });
   const [contact, setContact] = useState<ContactInfo>(() =>
     LS.get("row_contact", initialContact)
   );

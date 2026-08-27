@@ -63,6 +63,15 @@ function ChevronDown() {
   );
 }
 
+function SearchIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="w-5 h-5">
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-4-4" />
+    </svg>
+  );
+}
+
 // ─── Header ───────────────────────────────────────────────────────────────────
 
 function Header() {
@@ -111,8 +120,7 @@ function Header() {
               <img src={brandLogo} alt="ROW" className="w-full h-full object-cover" style={{ objectPosition: "center" }} />
             </div>
             <div className="hidden sm:block">
-              <div className="font-display font-bold text-white text-lg leading-none">ROW</div>
-              <div className="text-xs" style={{ color: "#F5C518", letterSpacing: "0.15em" }}>RESTAURANT & CAFE</div>
+              <div className="font-display font-bold text-white text-lg leading-none">{storeSettings.storeName || "ROW Restaurant"}</div>
             </div>
           </button>
 
@@ -326,7 +334,7 @@ function Hero() {
           }}
         >
           <span>★</span>
-          <span>حيفا · شارع حيفا</span>
+          <span>جنين · شارع حيفا</span>
           <span>★</span>
         </div>
 
@@ -441,15 +449,19 @@ function ProductCard({ product }: { product: { id: string; name: string; descrip
 function MenuSection() {
   const { categories, products } = useApp();
   const [activeCategory, setActiveCategory] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const filterRef = useRef<HTMLDivElement>(null);
 
   const visibleCategories = categories.filter((c) => c.visible);
   const visibleProducts = products.filter((p) => p.visible);
 
-  const filtered =
-    activeCategory === "all"
-      ? visibleProducts
-      : visibleProducts.filter((p) => p.categoryId === activeCategory);
+  const categoryProducts = activeCategory === "all"
+    ? visibleProducts
+    : visibleProducts.filter((p) => p.categoryId === activeCategory);
+  const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
+  const filtered = categoryProducts.filter((p) =>
+    !normalizedQuery || `${p.name} ${p.description} ${p.price}`.toLocaleLowerCase().includes(normalizedQuery)
+  );
 
   const handleCategoryClick = (id: string) => {
     setActiveCategory(id);
@@ -479,6 +491,17 @@ function MenuSection() {
 
         {/* Category filter pills */}
         <div ref={filterRef} className="flex gap-2 overflow-x-auto pb-3 mb-10 scrollbar-hide" style={{ scrollbarWidth: "none" }}>
+          <div className="relative flex-shrink-0">
+            <input
+              aria-label="البحث في القائمة"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="ابحث في القائمة"
+              className="form-input h-10 w-48 pr-9 text-sm"
+              dir="rtl"
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "#F5C518" }}><SearchIcon /></span>
+          </div>
           <button
             onClick={() => setActiveCategory("all")}
             className={`filter-btn px-5 py-2 rounded-full text-sm${activeCategory === "all" ? " active" : ""}`}
@@ -506,7 +529,19 @@ function MenuSection() {
         </div>
 
         {/* When showing all, group by category */}
-        {activeCategory === "all" ? (
+        {normalizedQuery ? (
+          <div>
+            <div className="flex items-center justify-between mb-6" dir="rtl">
+              <h3 className="font-display text-xl md:text-2xl font-bold text-white">نتائج البحث</h3>
+              <span className="text-xs" style={{ color: "#888" }}>{filtered.length} صنف</span>
+            </div>
+            {filtered.length === 0 ? <p className="text-center py-10" style={{ color: "#888" }}>لا توجد منتجات مطابقة للبحث.</p> : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {filtered.map((prod) => <ProductCard key={prod.id} product={prod} />)}
+              </div>
+            )}
+          </div>
+        ) : activeCategory === "all" ? (
           <div className="space-y-16">
             {visibleCategories.map((cat) => {
               const catProducts = visibleProducts.filter((p) => p.categoryId === cat.id);
@@ -625,7 +660,7 @@ function ContactSection() {
           نحن هنا لخدمتكم
         </h2>
         <p className="text-sm mb-10" style={{ color: "#888" }} dir="rtl">
-          شارع حيفا، حيفا — تفضل بزيارتنا أو تواصل معنا على وسائل التواصل الاجتماعي
+          شارع حيفا، جنين — تفضل بزيارتنا أو تواصل معنا على وسائل التواصل الاجتماعي
         </p>
 
         <div className="flex justify-center gap-4 flex-wrap">
@@ -695,7 +730,7 @@ function Footer() {
             <span className="font-display text-sm font-semibold text-white">{storeSettings.storeName || "ROW Restaurant"}</span>
           </div>
           <p className="text-xs" style={{ color: "#444" }}>
-            شارع حيفا، حيفا
+            شارع حيفا، جنين
           </p>
           <p className="text-xs" style={{ color: "#3a3a3a" }}>
             Built by{" "}

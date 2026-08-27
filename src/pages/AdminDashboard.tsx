@@ -45,6 +45,15 @@ function statusColor(status: string) {
   return colors[status] ?? "#888";
 }
 
+function SearchIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="w-5 h-5">
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-4-4" />
+    </svg>
+  );
+}
+
 function Overview() {
   const { categories, products, orders, customers } = useApp();
   const totalSales = orders.reduce((sum, order) => sum + Number(order.total || 0), 0);
@@ -269,6 +278,7 @@ function ProductsManager() {
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [filterCat, setFilterCat] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
@@ -317,7 +327,12 @@ function ProductsManager() {
     reset();
   };
 
-  const filtered = products.filter((p) => filterCat === "all" || p.categoryId === filterCat);
+  const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
+  const filtered = products.filter((p) => {
+    const matchesCategory = filterCat === "all" || p.categoryId === filterCat;
+    const matchesSearch = !normalizedQuery || `${p.name} ${p.description} ${p.price}`.toLocaleLowerCase().includes(normalizedQuery);
+    return matchesCategory && matchesSearch;
+  });
 
   return (
     <div>
@@ -384,6 +399,17 @@ function ProductsManager() {
         </div>
       )}
 
+      <div className="relative mb-4" dir="rtl">
+        <input
+          aria-label="البحث في المنتجات"
+          className="form-input pr-10"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="ابحث عن منتج بالاسم أو الوصف أو السعر"
+        />
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "#F5C518" }}><SearchIcon /></span>
+      </div>
+
       <div className="flex gap-2 overflow-x-auto pb-2 mb-6" style={{ scrollbarWidth: "none" }}>
         <button onClick={() => setFilterCat("all")} className="px-4 py-1.5 rounded-full text-xs transition-all whitespace-nowrap" style={{ background: filterCat === "all" ? "#F5C518" : "#1C1C1C", color: filterCat === "all" ? "#0A0A0A" : "#888", border: "1px solid", borderColor: filterCat === "all" ? "#F5C518" : "rgba(255,255,255,0.1)" }}>الكل ({products.length})</button>
         {categories.map((c) => {
@@ -397,7 +423,7 @@ function ProductsManager() {
       </div>
 
       <div className="space-y-2">
-        {filtered.map((prod) => {
+        {filtered.length === 0 ? <p className="text-center py-10 text-sm" style={{ color: "#888" }}>لا توجد منتجات مطابقة للبحث.</p> : filtered.map((prod) => {
           const cat = categories.find((c) => c.id === prod.categoryId);
           return (
             <div key={prod.id} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: "#141414", border: "1px solid rgba(255,255,255,0.05)" }} dir="rtl">
@@ -820,7 +846,7 @@ export default function AdminDashboard() {
           <div className="w-8 h-8 rounded-full overflow-hidden" style={{ border: "1px solid rgba(245,197,24,0.3)", background: "#000000" }}>
             <img src={brandLogo} alt="ROW" className="w-full h-full object-cover" style={{ opacity: 1, visibility: "visible", display: "block", objectPosition: "center" }} />
           </div>
-          <span className="font-display font-bold text-white text-sm">لوحة تحكم ROW</span>
+          <span className="font-display font-bold text-white text-sm">لوحة تحكم {storeSettings.storeName || "ROW Restaurant"}</span>
         </div>
         <div className="flex items-center gap-3">
           <button onClick={() => setCurrentPage("home")} className="text-xs px-3 py-1.5 rounded-lg transition-all hidden sm:block" style={{ background: "rgba(255,255,255,0.06)", color: "#ccc", border: "1px solid rgba(255,255,255,0.1)" }}>← الموقع</button>

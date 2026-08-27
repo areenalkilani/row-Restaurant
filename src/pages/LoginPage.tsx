@@ -69,7 +69,7 @@ export default function LoginPage() {
             </div>
             <h1 className="font-display text-2xl font-bold text-white">تسجيل الدخول</h1>
             <p className="text-sm mt-1" style={{ color: "#888" }}>
-              ROW Restaurant & Cafe
+              {storeSettings.storeName || "ROW Restaurant"}
             </p>
           </div>
 

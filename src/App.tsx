@@ -20,20 +20,26 @@ function AppShell() {
 
   useEffect(() => {
     const syncFromUrl = () => {
+      const hash = window.location.hash.toLowerCase();
       const path = window.location.pathname.toLowerCase();
-      if (path === "/admin") setCurrentPage("admin");
-      else if (path === "/login") setCurrentPage("login");
+      const route = hash.startsWith("#/") ? hash.slice(1) : path;
+      if (route === "/admin") setCurrentPage("admin");
+      else if (route === "/login") setCurrentPage("login");
       else setCurrentPage("home");
     };
 
     syncFromUrl();
     window.addEventListener("popstate", syncFromUrl);
-    return () => window.removeEventListener("popstate", syncFromUrl);
+    window.addEventListener("hashchange", syncFromUrl);
+    return () => {
+      window.removeEventListener("popstate", syncFromUrl);
+      window.removeEventListener("hashchange", syncFromUrl);
+    };
   }, [setCurrentPage]);
 
   useEffect(() => {
-    const targetPath = currentPage === "admin" ? "/admin" : currentPage === "login" ? "/login" : "/";
-    const currentPath = window.location.pathname.toLowerCase();
+    const targetPath = currentPage === "admin" ? "#/admin" : currentPage === "login" ? "#/login" : "#/";
+    const currentPath = window.location.hash.toLowerCase();
 
     if (currentPath !== targetPath) {
       window.history.pushState({}, "", targetPath);
