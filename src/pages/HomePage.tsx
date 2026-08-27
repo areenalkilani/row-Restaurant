@@ -350,7 +350,7 @@ function Hero() {
         {/* Subtext */}
         <p
           className="text-base md:text-lg mb-10 max-w-2xl mx-auto animate-fadeInUp"
-          style={{ color: "rgba(255,255,255,0.75)", animationDelay: "0.4s", lineHeight: 1.8 }}
+          style={{ color: "rgba(255,255,255,0.75)", animationDelay: "0.4s", lineHeight: 1.8, textAlign: "center" }}
           dir="rtl"
         >
           {banner.subtext}
