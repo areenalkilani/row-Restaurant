@@ -38,6 +38,7 @@ try {
   if (isDataImage(state.banner?.imageUrl)) state.banner.imageUrl = await compressImage(state.banner.imageUrl);
   if (isDataImage(state.storeSettings?.logoUrl)) state.storeSettings.logoUrl = await compressImage(state.storeSettings.logoUrl);
 
+  state._rowRevision = Date.now();
   await pool.query("UPDATE restaurant_state SET data = $1::jsonb, updated_at = NOW() WHERE id = 1", [JSON.stringify(state)]);
   console.log(`Compressed ${compressed} database images.`);
 } finally {
