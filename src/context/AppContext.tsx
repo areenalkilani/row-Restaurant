@@ -166,6 +166,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [currentPage, setCurrentPage] = useState<Page>("home");
   const [adminSection, setAdminSection] = useState<AdminSection>("overview");
   const databaseReady = useRef(false);
+  const saveQueue = useRef(Promise.resolve());
+  const stateRevision = useRef(Date.now());
 
   const [categories, setCategories] = useState<Category[]>(() => {
     const savedCategories = LS.get("row_categories", initialCategories);
