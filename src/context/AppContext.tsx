@@ -199,6 +199,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const databaseReady = useRef(false);
   const saveQueue = useRef(Promise.resolve());
   const stateRevision = useRef(LS.get(STATE_KEYS.revision, 0));
+  const hasLocalChanges = useRef(false);
+  const skipNextEffectSave = useRef(false);
 
   const [categories, setCategories] = useState<Category[]>(() => {
     const savedCategories = LS.get(STATE_KEYS.categories, initialCategories);
@@ -242,6 +244,48 @@ export function AppProvider({ children }: { children: ReactNode }) {
     LS.get(STATE_KEYS.orders, initialOrders)
   );
 
+  const stateRef = useRef<PersistedState>({
+    categories,
+    products,
+    banner,
+    contact,
+    storeSettings,
+    customers,
+    orders,
+  });
+
+  const saveState = (state: PersistedState) => {
+    stateRevision.current = Math.max(Date.now(), stateRevision.current + 1);
+    const revision = stateRevision.current;
+    persistStateLocally(state, revision);
+    saveQueue.current = saveQueue.current.then(() => fetch("/api/state", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", "X-State-Revision": String(revision) },
+      body: JSON.stringify(state),
+    }).then((response) => {
+      if (!response.ok) throw new Error(`State save failed: ${response.status}`);
+    }).catch(() => undefined));
+  };
+
+  const commitState = (updates: Partial<PersistedState>) => {
+    const nextState = {
+      ...stateRef.current,
+      ...updates,
+    };
+    stateRef.current = nextState;
+    hasLocalChanges.current = true;
+    databaseReady.current = true;
+    skipNextEffectSave.current = true;
+    if (updates.categories) setCategories(updates.categories);
+    if (updates.products) setProducts(updates.products);
+    if (updates.banner) setBanner(updates.banner);
+    if (updates.contact) setContact(updates.contact);
+    if (updates.storeSettings) setStoreSettings(updates.storeSettings);
+    if (updates.customers) setCustomers(updates.customers);
+    if (updates.orders) setOrders(updates.orders);
+    saveState(nextState);
+  };
+
   useEffect(() => {
     let active = true;
     fetch("/api/state")
@@ -254,10 +298,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
       })
       .then((remote) => {
         if (!active) return;
-        if (remote?.state && remote.revision > stateRevision.current) {
+        if (remote?.state && remote.revision > stateRevision.current && !hasLocalChanges.current) {
           const saved = remote.state;
           const remoteBanner = saved.banner || initialBanner;
           const remoteCategories = withCategoryOrder(saved.categories || initialCategories);
+          const remoteState = {
+            categories: remoteCategories,
+            products: saved.products || initialProducts,
+            banner: remoteBanner,
+            contact: saved.contact || initialContact,
+            storeSettings: saved.storeSettings || initialStoreSettings,
+            customers: saved.customers || initialCustomers,
+            orders: saved.orders || initialOrders,
+          };
+          stateRef.current = remoteState;
           setCategories(remoteCategories);
           setProducts(saved.products || initialProducts);
           setBanner(remoteBanner.headline === "مرحباً بكم في ROW" ? { ...remoteBanner, headline: initialBanner.headline } : remoteBanner);
@@ -266,20 +320,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
           setCustomers(saved.customers || initialCustomers);
           setOrders(saved.orders || initialOrders);
           stateRevision.current = remote.revision;
-          persistStateLocally(
-            {
-              categories: remoteCategories,
-              products: saved.products || initialProducts,
-              banner: remoteBanner,
-              contact: saved.contact || initialContact,
-              storeSettings: saved.storeSettings || initialStoreSettings,
-              customers: saved.customers || initialCustomers,
-              orders: saved.orders || initialOrders,
-            },
-            remote.revision,
-          );
+          persistStateLocally(remoteState, remote.revision);
         } else {
           const initialState: PersistedState = { categories, products, banner, contact, storeSettings, customers, orders };
+          stateRef.current = initialState;
           stateRevision.current = Math.max(Date.now(), stateRevision.current + 1);
           persistStateLocally(initialState, stateRevision.current);
           saveQueue.current = saveQueue.current.then(() => fetch("/api/state", {
@@ -299,16 +343,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!databaseReady.current) return;
     const state: PersistedState = { categories, products, banner, contact, storeSettings, customers, orders };
-    stateRevision.current = Math.max(Date.now(), stateRevision.current + 1);
-    const revision = stateRevision.current;
-    persistStateLocally(state, revision);
-    saveQueue.current = saveQueue.current.then(() => fetch("/api/state", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json", "X-State-Revision": String(revision) },
-      body: JSON.stringify(state),
-    }).then((response) => {
-      if (!response.ok) throw new Error(`State save failed: ${response.status}`);
-    }).catch(() => undefined));
+    stateRef.current = state;
+    if (skipNextEffectSave.current) {
+      skipNextEffectSave.current = false;
+      return;
+    }
+    saveState(state);
   }, [categories, products, banner, contact, storeSettings, customers, orders]);
 
   const login = (email: string, password: string): boolean => {
@@ -344,116 +384,100 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setCurrentPage("home");
   };
 
-  const markStateChanged = () => {
-    if (!databaseReady.current) databaseReady.current = true;
-  };
-
   const addCategory = (cat: Omit<Category, "id">) => {
-    markStateChanged();
     const next: Category = {
       ...cat,
       id: `cat-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     };
-    setCategories((prev) => {
-      const ordered = withCategoryOrder(prev);
-      const order = Math.min(Math.max(1, Math.round(Number(next.order) || ordered.length + 1)), ordered.length + 1);
-      ordered.splice(order - 1, 0, { ...next, order });
-      return withCategoryOrder(ordered);
-    });
+    const ordered = withCategoryOrder(stateRef.current.categories);
+    const order = Math.min(Math.max(1, Math.round(Number(next.order) || ordered.length + 1)), ordered.length + 1);
+    ordered.splice(order - 1, 0, { ...next, order });
+    commitState({ categories: withCategoryOrder(ordered) });
   };
 
   const updateCategory = (id: string, updates: Partial<Category>) => {
-    markStateChanged();
-    setCategories((prev) => {
-      const ordered = withCategoryOrder(prev);
-      const currentIndex = ordered.findIndex((category) => category.id === id);
-      if (currentIndex === -1) return ordered;
-      const updated = { ...ordered[currentIndex], ...updates };
-      ordered.splice(currentIndex, 1);
-      if (updates.order !== undefined) {
-        const nextIndex = Math.min(Math.max(0, Math.round(Number(updates.order) || 1) - 1), ordered.length);
-        ordered.splice(nextIndex, 0, updated);
-      } else {
-        ordered.splice(currentIndex, 0, updated);
-      }
-      return withCategoryOrder(ordered);
-    });
+    const ordered = withCategoryOrder(stateRef.current.categories);
+    const currentIndex = ordered.findIndex((category) => category.id === id);
+    if (currentIndex === -1) return;
+    const updated = { ...ordered[currentIndex], ...updates };
+    ordered.splice(currentIndex, 1);
+    if (updates.order !== undefined) {
+      const nextIndex = Math.min(Math.max(0, Math.round(Number(updates.order) || 1) - 1), ordered.length);
+      ordered.splice(nextIndex, 0, updated);
+    } else {
+      ordered.splice(currentIndex, 0, updated);
+    }
+    commitState({ categories: withCategoryOrder(ordered) });
   };
 
   const deleteCategory = (id: string) => {
-    markStateChanged();
-    setCategories((prev) => prev.filter((c) => c.id !== id));
-    setProducts((prev) => prev.filter((p) => p.categoryId !== id));
+    commitState({
+      categories: withCategoryOrder(stateRef.current.categories.filter((c) => c.id !== id)),
+      products: stateRef.current.products.filter((p) => p.categoryId !== id),
+    });
   };
 
   const addProduct = (prod: Omit<Product, "id">) => {
-    markStateChanged();
     const next: Product = { ...prod, id: `prod-${Date.now()}-${Math.random().toString(36).slice(2, 8)}` };
-    setProducts((prev) => [...prev, next]);
+    commitState({ products: [...stateRef.current.products, next] });
   };
 
   const updateProduct = (id: string, updates: Partial<Product>) => {
-    markStateChanged();
-    setProducts((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, ...updates } : p))
-    );
+    commitState({
+      products: stateRef.current.products.map((p) => (p.id === id ? { ...p, ...updates } : p)),
+    });
   };
 
   const deleteProduct = (id: string) => {
-    markStateChanged();
-    setProducts((prev) => prev.filter((p) => p.id !== id));
+    commitState({ products: stateRef.current.products.filter((p) => p.id !== id) });
   };
 
   const updateBanner = (b: Partial<BannerConfig>) => {
-    markStateChanged();
-    setBanner((prev) => ({ ...prev, ...b }));
+    commitState({ banner: { ...stateRef.current.banner, ...b } });
   };
 
   const updateContact = (c: Partial<ContactInfo>) => {
-    markStateChanged();
-    setContact((prev) => ({ ...prev, ...c }));
+    commitState({ contact: { ...stateRef.current.contact, ...c } });
   };
 
   const updateStoreSettings = (settings: Partial<StoreSettings>) => {
-    markStateChanged();
-    setStoreSettings((prev) => ({ ...prev, ...settings }));
+    commitState({ storeSettings: { ...stateRef.current.storeSettings, ...settings } });
   };
 
   const addCustomer = (customer: Omit<Customer, "id" | "joinedAt">): Customer => {
-    markStateChanged();
     const next: Customer = {
       ...customer,
       id: `cust-${Date.now()}`,
       joinedAt: new Date().toISOString(),
     };
-    setCustomers((prev) => [next, ...prev]);
+    commitState({ customers: [next, ...stateRef.current.customers] });
     return next;
   };
 
   const updateCustomer = (id: string, customer: Partial<Customer>) => {
-    markStateChanged();
-    setCustomers((prev) => prev.map((c) => (c.id === id ? { ...c, ...customer } : c)));
+    commitState({
+      customers: stateRef.current.customers.map((c) => (c.id === id ? { ...c, ...customer } : c)),
+    });
   };
 
   const addOrder = (order: Omit<Order, "id" | "createdAt">): Order => {
-    markStateChanged();
     const next: Order = {
       ...order,
       id: `ord-${Date.now()}`,
       createdAt: new Date().toISOString(),
     };
-    setOrders((prev) => [next, ...prev]);
+    commitState({ orders: [next, ...stateRef.current.orders] });
     return next;
   };
 
   const updateOrderStatus = (id: string, status: Order["status"]) => {
-    markStateChanged();
-    setOrders((prev) => prev.map((order) => (order.id === id ? { ...order, status } : order)));
+    commitState({
+      orders: stateRef.current.orders.map((order) => (order.id === id ? { ...order, status } : order)),
+    });
   };
 
   const deleteOrder = (id: string) => {
-    markStateChanged();
-    setOrders((prev) => prev.filter((order) => order.id !== id));
+    commitState({ orders: stateRef.current.orders.filter((order) => order.id !== id) });
   };
 
   return (
