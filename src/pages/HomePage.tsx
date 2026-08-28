@@ -414,7 +414,8 @@ function ProductCard({ product }: { product: { id: string; name: string; descrip
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
             style={{ opacity: 1, visibility: "visible", display: "block" }}
             onError={() => setImgError(true)}
-            loading="lazy"
+            loading="eager"
+            decoding="async"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center" style={{ background: "#1C1C1C" }}>
