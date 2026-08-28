@@ -9,7 +9,7 @@ import {
 } from "../data/menuData";
 
 export type Page = "home" | "login" | "admin";
-export type AdminSection = "overview" | "categories" | "products" | "banner" | "contact" | "settings";
+export type AdminSection = "overview" | "categories" | "products" | "orders" | "customers" | "banner" | "contact" | "settings";
 
 export interface BannerConfig {
   type: "image" | "video";
@@ -96,7 +96,7 @@ interface AppContextType {
 
   // Categories
   categories: Category[];
-  addCategory: (cat: Omit<Category, "id" | "order">) => void;
+  addCategory: (cat: Omit<Category, "id">) => void;
   updateCategory: (id: string, updates: Partial<Category>) => void;
   deleteCategory: (id: string) => void;
 
@@ -159,6 +159,37 @@ type PersistedState = {
   orders: Order[];
 };
 
+const STATE_KEYS = {
+  categories: "row_categories",
+  products: "row_products",
+  banner: "row_banner",
+  contact: "row_contact",
+  storeSettings: "row_store_settings",
+  customers: "row_customers",
+  orders: "row_orders",
+  revision: "row_state_revision",
+};
+
+const withCategoryOrder = (items: Category[]) =>
+  items
+    .map((category, index) => ({
+      ...category,
+      order: Number.isFinite(Number(category.order)) ? Number(category.order) : index + 1,
+    }))
+    .sort((a, b) => a.order - b.order)
+    .map((category, index) => ({ ...category, order: index + 1 }));
+
+const persistStateLocally = (state: PersistedState, revision: number) => {
+  LS.set(STATE_KEYS.categories, state.categories);
+  LS.set(STATE_KEYS.products, state.products);
+  LS.set(STATE_KEYS.banner, state.banner);
+  LS.set(STATE_KEYS.contact, state.contact);
+  LS.set(STATE_KEYS.storeSettings, state.storeSettings);
+  LS.set(STATE_KEYS.customers, state.customers);
+  LS.set(STATE_KEYS.orders, state.orders);
+  LS.set(STATE_KEYS.revision, revision);
+};
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(() => LS.get("row_logged_in", false));
   const [isAdmin, setIsAdmin] = useState(() => LS.get("row_is_admin", false));
@@ -167,18 +198,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [adminSection, setAdminSection] = useState<AdminSection>("overview");
   const databaseReady = useRef(false);
   const saveQueue = useRef(Promise.resolve());
-  const stateRevision = useRef(Date.now());
+  const stateRevision = useRef(LS.get(STATE_KEYS.revision, 0));
 
   const [categories, setCategories] = useState<Category[]>(() => {
-    const savedCategories = LS.get("row_categories", initialCategories);
-    return savedCategories.map((category) => {
+    const savedCategories = LS.get(STATE_KEYS.categories, initialCategories);
+    return withCategoryOrder(savedCategories).map((category) => {
       const seedCategory = initialCategories.find((seed) => seed.id === category.id);
       const isMenuPageImage = ["min1.jpeg", "min2.jpeg", "min3.jpeg", "min4.jpeg", "min5.jpeg"].some((fileName) => category.image.includes(fileName));
       return isMenuPageImage && seedCategory ? { ...category, image: seedCategory.image } : category;
     });
   });
   const [products, setProducts] = useState<Product[]>(() => {
-    const savedProducts = LS.get("row_products", initialProducts);
+    const savedProducts = LS.get(STATE_KEYS.products, initialProducts);
     return savedProducts.map((product) => {
       const seedProduct = initialProducts.find((seed) => seed.id === product.id);
       const isMenuPageImage = ["min1.jpeg", "min2.jpeg", "min3.jpeg", "min4.jpeg", "min5.jpeg"].some((fileName) => product.image.includes(fileName));
@@ -186,7 +217,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   });
   const [banner, setBanner] = useState<BannerConfig>(() => {
-    const savedBanner = LS.get("row_banner", initialBanner);
+    const savedBanner = LS.get(STATE_KEYS.banner, initialBanner);
     if (savedBanner.headline === "مرحباً بكم في ROW") {
       return { ...savedBanner, headline: initialBanner.headline };
     }
@@ -199,36 +230,58 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return savedBanner;
   });
   const [contact, setContact] = useState<ContactInfo>(() =>
-    LS.get("row_contact", initialContact)
+    LS.get(STATE_KEYS.contact, initialContact)
   );
   const [storeSettings, setStoreSettings] = useState<StoreSettings>(() =>
-    LS.get("row_store_settings", initialStoreSettings)
+    LS.get(STATE_KEYS.storeSettings, initialStoreSettings)
   );
   const [customers, setCustomers] = useState<Customer[]>(() =>
-    LS.get("row_customers", initialCustomers)
+    LS.get(STATE_KEYS.customers, initialCustomers)
   );
   const [orders, setOrders] = useState<Order[]>(() =>
-    LS.get("row_orders", initialOrders)
+    LS.get(STATE_KEYS.orders, initialOrders)
   );
 
   useEffect(() => {
     let active = true;
     fetch("/api/state")
-      .then((response) => (response.ok ? response.json() : null))
-      .then((saved: PersistedState | null) => {
+      .then(async (response) => {
+        if (!response.ok) return null;
+        return {
+          revision: Number(response.headers.get("X-State-Revision")) || 0,
+          state: (await response.json()) as PersistedState | null,
+        };
+      })
+      .then((remote) => {
         if (!active) return;
-        if (saved) {
+        if (remote?.state && remote.revision > stateRevision.current) {
+          const saved = remote.state;
           const remoteBanner = saved.banner || initialBanner;
-          setCategories(saved.categories || initialCategories);
+          const remoteCategories = withCategoryOrder(saved.categories || initialCategories);
+          setCategories(remoteCategories);
           setProducts(saved.products || initialProducts);
           setBanner(remoteBanner.headline === "مرحباً بكم في ROW" ? { ...remoteBanner, headline: initialBanner.headline } : remoteBanner);
           setContact(saved.contact || initialContact);
           setStoreSettings(saved.storeSettings || initialStoreSettings);
           setCustomers(saved.customers || initialCustomers);
           setOrders(saved.orders || initialOrders);
+          stateRevision.current = remote.revision;
+          persistStateLocally(
+            {
+              categories: remoteCategories,
+              products: saved.products || initialProducts,
+              banner: remoteBanner,
+              contact: saved.contact || initialContact,
+              storeSettings: saved.storeSettings || initialStoreSettings,
+              customers: saved.customers || initialCustomers,
+              orders: saved.orders || initialOrders,
+            },
+            remote.revision,
+          );
         } else {
           const initialState: PersistedState = { categories, products, banner, contact, storeSettings, customers, orders };
-          stateRevision.current = Date.now();
+          stateRevision.current = Math.max(Date.now(), stateRevision.current + 1);
+          persistStateLocally(initialState, stateRevision.current);
           saveQueue.current = saveQueue.current.then(() => fetch("/api/state", {
             method: "PUT",
             headers: { "Content-Type": "application/json", "X-State-Revision": String(stateRevision.current) },
@@ -248,6 +301,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const state: PersistedState = { categories, products, banner, contact, storeSettings, customers, orders };
     stateRevision.current = Math.max(Date.now(), stateRevision.current + 1);
     const revision = stateRevision.current;
+    persistStateLocally(state, revision);
     saveQueue.current = saveQueue.current.then(() => fetch("/api/state", {
       method: "PUT",
       headers: { "Content-Type": "application/json", "X-State-Revision": String(revision) },
@@ -290,54 +344,83 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setCurrentPage("home");
   };
 
-  const addCategory = (cat: Omit<Category, "id" | "order">) => {
+  const markStateChanged = () => {
+    if (!databaseReady.current) databaseReady.current = true;
+  };
+
+  const addCategory = (cat: Omit<Category, "id">) => {
+    markStateChanged();
     const next: Category = {
       ...cat,
-      id: `cat-${Date.now()}`,
-      order: categories.length + 1,
+      id: `cat-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     };
-    setCategories((prev) => [...prev, next]);
+    setCategories((prev) => {
+      const ordered = withCategoryOrder(prev);
+      const order = Math.min(Math.max(1, Math.round(Number(next.order) || ordered.length + 1)), ordered.length + 1);
+      ordered.splice(order - 1, 0, { ...next, order });
+      return withCategoryOrder(ordered);
+    });
   };
 
   const updateCategory = (id: string, updates: Partial<Category>) => {
-    setCategories((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, ...updates } : c))
-    );
+    markStateChanged();
+    setCategories((prev) => {
+      const ordered = withCategoryOrder(prev);
+      const currentIndex = ordered.findIndex((category) => category.id === id);
+      if (currentIndex === -1) return ordered;
+      const updated = { ...ordered[currentIndex], ...updates };
+      ordered.splice(currentIndex, 1);
+      if (updates.order !== undefined) {
+        const nextIndex = Math.min(Math.max(0, Math.round(Number(updates.order) || 1) - 1), ordered.length);
+        ordered.splice(nextIndex, 0, updated);
+      } else {
+        ordered.splice(currentIndex, 0, updated);
+      }
+      return withCategoryOrder(ordered);
+    });
   };
 
   const deleteCategory = (id: string) => {
+    markStateChanged();
     setCategories((prev) => prev.filter((c) => c.id !== id));
     setProducts((prev) => prev.filter((p) => p.categoryId !== id));
   };
 
   const addProduct = (prod: Omit<Product, "id">) => {
-    const next: Product = { ...prod, id: `prod-${Date.now()}` };
+    markStateChanged();
+    const next: Product = { ...prod, id: `prod-${Date.now()}-${Math.random().toString(36).slice(2, 8)}` };
     setProducts((prev) => [...prev, next]);
   };
 
   const updateProduct = (id: string, updates: Partial<Product>) => {
+    markStateChanged();
     setProducts((prev) =>
       prev.map((p) => (p.id === id ? { ...p, ...updates } : p))
     );
   };
 
   const deleteProduct = (id: string) => {
+    markStateChanged();
     setProducts((prev) => prev.filter((p) => p.id !== id));
   };
 
   const updateBanner = (b: Partial<BannerConfig>) => {
+    markStateChanged();
     setBanner((prev) => ({ ...prev, ...b }));
   };
 
   const updateContact = (c: Partial<ContactInfo>) => {
+    markStateChanged();
     setContact((prev) => ({ ...prev, ...c }));
   };
 
   const updateStoreSettings = (settings: Partial<StoreSettings>) => {
+    markStateChanged();
     setStoreSettings((prev) => ({ ...prev, ...settings }));
   };
 
   const addCustomer = (customer: Omit<Customer, "id" | "joinedAt">): Customer => {
+    markStateChanged();
     const next: Customer = {
       ...customer,
       id: `cust-${Date.now()}`,
@@ -348,10 +431,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const updateCustomer = (id: string, customer: Partial<Customer>) => {
+    markStateChanged();
     setCustomers((prev) => prev.map((c) => (c.id === id ? { ...c, ...customer } : c)));
   };
 
   const addOrder = (order: Omit<Order, "id" | "createdAt">): Order => {
+    markStateChanged();
     const next: Order = {
       ...order,
       id: `ord-${Date.now()}`,
@@ -362,10 +447,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const updateOrderStatus = (id: string, status: Order["status"]) => {
+    markStateChanged();
     setOrders((prev) => prev.map((order) => (order.id === id ? { ...order, status } : order)));
   };
 
   const deleteOrder = (id: string) => {
+    markStateChanged();
     setOrders((prev) => prev.filter((order) => order.id !== id));
   };
 

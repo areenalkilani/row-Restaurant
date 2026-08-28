@@ -26,7 +26,8 @@ function sendJson(response, status, body) {
   response.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
     "Access-Control-Allow-Origin": process.env.CORS_ORIGIN || "*",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, X-State-Revision",
+    "Access-Control-Expose-Headers": "X-State-Revision",
   });
   response.end(JSON.stringify(body));
 }
@@ -46,7 +47,7 @@ function unwrapState(value) {
 const server = createServer(async (request, response) => {
   try {
     if (request.method === "OPTIONS") {
-      response.writeHead(204, { "Access-Control-Allow-Origin": process.env.CORS_ORIGIN || "*", "Access-Control-Allow-Headers": "Content-Type" });
+      response.writeHead(204, { "Access-Control-Allow-Origin": process.env.CORS_ORIGIN || "*", "Access-Control-Allow-Headers": "Content-Type, X-State-Revision" });
       return response.end();
     }
 
@@ -54,7 +55,9 @@ const server = createServer(async (request, response) => {
 
     if (request.url === "/api/state" && request.method === "GET") {
       const result = await pool.query("SELECT data FROM restaurant_state WHERE id = 1");
-      return sendJson(response, 200, unwrapState(result.rows[0]?.data || null).data);
+      const current = unwrapState(result.rows[0]?.data || null);
+      response.setHeader("X-State-Revision", String(current.revision));
+      return sendJson(response, 200, current.data);
     }
 
     if (request.url === "/api/state" && request.method === "PUT") {

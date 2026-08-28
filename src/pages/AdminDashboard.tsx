@@ -175,6 +175,7 @@ function CategoriesManager() {
   const [name, setName] = useState("");
   const [image, setImage] = useState("");
   const [visible, setVisible] = useState(true);
+  const [order, setOrder] = useState(String(categories.length + 1));
   const [preview, setPreview] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLDivElement>(null);
@@ -184,6 +185,7 @@ function CategoriesManager() {
     setImage("");
     setPreview("");
     setVisible(true);
+    setOrder(String(categories.length + 1));
     setEditId(null);
     setShowForm(false);
   };
@@ -202,18 +204,24 @@ function CategoriesManager() {
     setImage(cat.image);
     setPreview(cat.image);
     setVisible(cat.visible);
+    setOrder(String(cat.order));
     setShowForm(true);
     setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 0);
   };
 
   const handleSave = () => {
     if (!name.trim()) return;
+    const nextOrder = Math.min(Math.max(1, Math.round(Number(order) || categories.length + 1)), categories.length + (editId ? 0 : 1));
     if (editId) {
-      updateCategory(editId, { name: name.trim(), image: image || preview, visible });
+      updateCategory(editId, { name: name.trim(), image: image || preview, visible, order: nextOrder });
     } else {
-      addCategory({ name: name.trim(), image: image || "", visible });
+      addCategory({ name: name.trim(), image: image || "", visible, order: nextOrder });
     }
     reset();
+  };
+
+  const moveCategory = (cat: Category, direction: -1 | 1) => {
+    updateCategory(cat.id, { order: cat.order + direction });
   };
 
   return (
@@ -235,6 +243,18 @@ function CategoriesManager() {
             <div>
               <label className="block text-sm mb-2" style={{ color: "#ccc" }}>اسم القسم *</label>
               <input className="form-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: مقبلات" />
+            </div>
+            <div>
+              <label className="block text-sm mb-2" style={{ color: "#ccc" }}>ترتيب الظهور</label>
+              <input
+                className="form-input"
+                type="number"
+                min={1}
+                max={categories.length + (editId ? 0 : 1)}
+                value={order}
+                onChange={(e) => setOrder(e.target.value)}
+                dir="ltr"
+              />
             </div>
             <div>
               <label className="block text-sm mb-2" style={{ color: "#ccc" }}>صورة القسم</label>
@@ -270,16 +290,18 @@ function CategoriesManager() {
       )}
 
       <div className="space-y-3">
-        {categories.map((cat) => (
+        {categories.map((cat, index) => (
           <div key={cat.id} className="flex items-center gap-4 p-4 rounded-xl" style={{ background: "#141414", border: "1px solid rgba(255,255,255,0.06)" }} dir="rtl">
             <div className="w-14 h-14 rounded-lg overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
               <img src={cat.image} alt={cat.name} className="w-full h-full object-cover" style={{ opacity: 1, visibility: "visible", display: "block" }} />
             </div>
             <div className="flex-1">
               <div className="font-medium text-white text-sm">{cat.name}</div>
-              <div className="text-xs mt-0.5" style={{ color: cat.visible ? "#22c55e" : "#888" }}>{cat.visible ? "● مرئي" : "● مخفي"}</div>
+              <div className="text-xs mt-0.5" style={{ color: cat.visible ? "#22c55e" : "#888" }}>{cat.visible ? "● مرئي" : "● مخفي"} · #{cat.order}</div>
             </div>
             <div className="flex items-center gap-2">
+              <button disabled={index === 0} onClick={() => moveCategory(cat, -1)} className="px-2.5 py-1.5 rounded-lg text-xs transition-all disabled:opacity-30" style={{ background: "#2a2a2a", color: "#ccc", border: "1px solid rgba(255,255,255,0.1)" }} title="رفع">↑</button>
+              <button disabled={index === categories.length - 1} onClick={() => moveCategory(cat, 1)} className="px-2.5 py-1.5 rounded-lg text-xs transition-all disabled:opacity-30" style={{ background: "#2a2a2a", color: "#ccc", border: "1px solid rgba(255,255,255,0.1)" }} title="تنزيل">↓</button>
               <button onClick={() => updateCategory(cat.id, { visible: !cat.visible })} className="px-3 py-1.5 rounded-lg text-xs transition-all" style={{ background: cat.visible ? "rgba(34,197,94,0.1)" : "rgba(255,255,255,0.06)", color: cat.visible ? "#22c55e" : "#888", border: "1px solid", borderColor: cat.visible ? "rgba(34,197,94,0.3)" : "rgba(255,255,255,0.1)" }}>{cat.visible ? "إخفاء" : "إظهار"}</button>
               <button onClick={() => handleEdit(cat)} className="px-3 py-1.5 rounded-lg text-xs transition-all" style={{ background: "rgba(245,197,24,0.1)", color: "#F5C518", border: "1px solid rgba(245,197,24,0.2)" }}>تعديل</button>
               <button onClick={() => { if (confirm(`هل تريد حذف قسم "${cat.name}"؟ سيتم حذف جميع منتجاته.`)) deleteCategory(cat.id); }} className="px-3 py-1.5 rounded-lg text-xs transition-all" style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)" }}>حذف</button>

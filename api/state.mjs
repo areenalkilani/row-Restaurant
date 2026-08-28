@@ -25,7 +25,8 @@ function unwrapState(value) {
 
 export default async function handler(request, response) {
   response.setHeader("Access-Control-Allow-Origin", "*");
-  response.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  response.setHeader("Access-Control-Allow-Headers", "Content-Type, X-State-Revision");
+  response.setHeader("Access-Control-Expose-Headers", "X-State-Revision");
 
   if (request.method === "OPTIONS") return response.status(204).end();
   if (!process.env.DATABASE_URL) return response.status(500).json({ error: "DATABASE_URL is not configured" });
