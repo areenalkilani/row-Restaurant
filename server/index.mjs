@@ -59,7 +59,10 @@ const server = createServer(async (request, response) => {
 
     if (request.url === "/api/state" && request.method === "PUT") {
       const data = await readBody(request);
-      const revision = Number(request.headers["x-state-revision"] || 0) || Date.now();
+      const revisionHeader = request.headers["x-state-revision"];
+      if (!revisionHeader) return sendJson(response, 428, { error: "Client update is required" });
+      const revision = Number(revisionHeader);
+      if (!Number.isSafeInteger(revision) || revision <= 0) return sendJson(response, 400, { error: "Invalid state revision" });
       const result = await pool.query(
         "INSERT INTO restaurant_state (id, data) VALUES (1, $1::jsonb) ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW() WHERE COALESCE((restaurant_state.data->>'_rowRevision')::bigint, 0) <= $2 RETURNING id",
         [JSON.stringify({ ...data, _rowRevision: revision }), revision],

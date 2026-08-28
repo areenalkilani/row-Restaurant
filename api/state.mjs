@@ -41,7 +41,12 @@ export default async function handler(request, response) {
     }
 
     if (request.method === "PUT") {
-      const incomingRevision = Number(request.headers["x-state-revision"] || 0) || Date.now();
+      const revisionHeader = request.headers["x-state-revision"];
+      if (!revisionHeader) return response.status(428).json({ error: "Client update is required" });
+      const incomingRevision = Number(revisionHeader);
+      if (!Number.isSafeInteger(incomingRevision) || incomingRevision <= 0) {
+        return response.status(400).json({ error: "Invalid state revision" });
+      }
       const state = { ...request.body, _rowRevision: incomingRevision };
       const result = await pool.query(
         "INSERT INTO restaurant_state (id, data) VALUES (1, $1::jsonb) ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW() WHERE COALESCE((restaurant_state.data->>'_rowRevision')::bigint, 0) <= $2 RETURNING id",
