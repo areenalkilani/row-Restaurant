@@ -397,6 +397,10 @@ function Hero() {
 function ProductCard({ product }: { product: { id: string; name: string; description: string; image: string; price: string } }) {
   const [imgError, setImgError] = useState(false);
 
+  useEffect(() => {
+    setImgError(false);
+  }, [product.image]);
+
   return (
     <div
       className="card-hover rounded-xl overflow-hidden group"
