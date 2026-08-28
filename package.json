@@ -7,6 +7,7 @@
     "dev": "vite --host 0.0.0.0",
     "api": "node server/index.mjs",
     "start": "node server/index.mjs",
+    "compress-state": "node scripts/compress-state.mjs",
     "build": "vite build",
     "preview": "vite preview",
     "format": "oxfmt"
@@ -15,7 +16,8 @@
     "dotenv": "^17.4.2",
     "pg": "^8.23.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "sharp": "^0.34.5"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",
