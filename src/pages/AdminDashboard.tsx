@@ -5,10 +5,26 @@ import logoUrl from "../imports/logo_row.jpeg";
 
 type AdminSection = "overview" | "categories" | "products" | "orders" | "customers" | "banner" | "contact" | "settings";
 
-function toBase64(file: File): Promise<string> {
+function toBase64(file: File, compressImage = false): Promise<string> {
   return new Promise((res, rej) => {
     const reader = new FileReader();
-    reader.onload = () => res(reader.result as string);
+    reader.onload = () => {
+      if (!compressImage) {
+        res(reader.result as string);
+        return;
+      }
+      const image = new Image();
+      image.onload = () => {
+        const scale = Math.min(1, 1400 / Math.max(image.width, image.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(image.width * scale));
+        canvas.height = Math.max(1, Math.round(image.height * scale));
+        canvas.getContext("2d")?.drawImage(image, 0, 0, canvas.width, canvas.height);
+        res(canvas.toDataURL("image/jpeg", 0.78));
+      };
+      image.onerror = rej;
+      image.src = reader.result as string;
+    };
     reader.onerror = rej;
     reader.readAsDataURL(file);
   });
@@ -175,7 +191,7 @@ function CategoriesManager() {
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const b64 = await toBase64(file);
+    const b64 = await toBase64(file, true);
     setImage(b64);
     setPreview(b64);
   };
@@ -306,7 +322,7 @@ function ProductsManager() {
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const b64 = await toBase64(file);
+    const b64 = await toBase64(file, true);
     setImage(b64);
     setPreview(b64);
   };
@@ -595,7 +611,7 @@ function BannerManager() {
   const handleImageFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const b64 = await toBase64(file);
+    const b64 = await toBase64(file, true);
     setLocalBanner((prev) => ({ ...prev, imageUrl: b64, type: "image" }));
   };
 
@@ -722,7 +738,7 @@ function StoreSettingsManager() {
   const handleLogoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const dataUrl = await toBase64(file);
+    const dataUrl = await toBase64(file, true);
     setLocal((prev) => ({ ...prev, logoUrl: dataUrl }));
   };
 
