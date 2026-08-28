@@ -37,6 +37,12 @@ async function readBody(request) {
   return JSON.parse(body || "{}");
 }
 
+function unwrapState(value) {
+  if (!value || typeof value !== "object") return { data: value, revision: 0 };
+  const { _rowRevision, ...data } = value;
+  return { data, revision: Number(_rowRevision) || 0 };
+}
+
 const server = createServer(async (request, response) => {
   try {
     if (request.method === "OPTIONS") {
@@ -48,15 +54,17 @@ const server = createServer(async (request, response) => {
 
     if (request.url === "/api/state" && request.method === "GET") {
       const result = await pool.query("SELECT data FROM restaurant_state WHERE id = 1");
-      return sendJson(response, 200, result.rows[0]?.data || null);
+      return sendJson(response, 200, unwrapState(result.rows[0]?.data || null).data);
     }
 
     if (request.url === "/api/state" && request.method === "PUT") {
       const data = await readBody(request);
-      await pool.query(
-        "INSERT INTO restaurant_state (id, data) VALUES (1, $1::jsonb) ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()",
-        [JSON.stringify(data)],
+      const revision = Number(request.headers["x-state-revision"] || 0) || Date.now();
+      const result = await pool.query(
+        "INSERT INTO restaurant_state (id, data) VALUES (1, $1::jsonb) ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW() WHERE COALESCE((restaurant_state.data->>'_rowRevision')::bigint, 0) <= $2 RETURNING id",
+        [JSON.stringify({ ...data, _rowRevision: revision }), revision],
       );
+      if (result.rowCount === 0) return sendJson(response, 409, { error: "A newer state is already saved" });
       return sendJson(response, 200, { ok: true });
     }
 

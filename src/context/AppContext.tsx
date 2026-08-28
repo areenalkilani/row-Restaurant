@@ -226,11 +226,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
           setOrders(saved.orders || initialOrders);
         } else {
           const initialState: PersistedState = { categories, products, banner, contact, storeSettings, customers, orders };
-          fetch("/api/state", {
+          stateRevision.current = Date.now();
+          saveQueue.current = saveQueue.current.then(() => fetch("/api/state", {
             method: "PUT",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", "X-State-Revision": String(stateRevision.current) },
             body: JSON.stringify(initialState),
-          }).catch(() => undefined);
+          }).then(() => undefined).catch(() => undefined));
         }
         databaseReady.current = true;
       })
@@ -243,11 +244,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!databaseReady.current) return;
     const state: PersistedState = { categories, products, banner, contact, storeSettings, customers, orders };
-    fetch("/api/state", {
+    stateRevision.current = Math.max(Date.now(), stateRevision.current + 1);
+    const revision = stateRevision.current;
+    saveQueue.current = saveQueue.current.then(() => fetch("/api/state", {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "X-State-Revision": String(revision) },
       body: JSON.stringify(state),
-    }).catch(() => undefined);
+    }).then((response) => {
+      if (!response.ok) throw new Error(`State save failed: ${response.status}`);
+    }).catch(() => undefined));
   }, [categories, products, banner, contact, storeSettings, customers, orders]);
 
   const login = (email: string, password: string): boolean => {
